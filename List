@@ -1,0 +1,68 @@
+/*Lehigh Alumni Sustainability Alliance is having an having on March 17th and I would like to request to pull a list of the following parameters:
+
+all LASA members
+current LU parents
+alumni that work in the Sustainability field
+Current students & faculty
+
+RAS advised that it would be better to use the daily annoucements to reach students that to email, so current students are not included in the selection
+*/
+
+SELECT DISTINCT con.banner_id
+, con.name_sort
+, Con.donor_code_primary
+, con.class_year_pref
+, contact.EMAIL_PREF_ADDRESS
+, nvl(sagl.current_year_ind,'N') LASA_leader_ind
+, nvl(sagm.current_year_ind,'N') LASA_member_ind
+, ind.CURRENT_YEAR_UG_PARENT_IND
+, emp.empl_position
+, FACULTY_IND 
+FROM c_cn_constituent con
+, C_CN_CONTACT_PREF contact
+, C_CN_CURRENT_NAMES names
+, C_CN_INDICATORS ind
+, c_cn_exclusions_by_id excl
+, C_CN_EMPLOYMENT_PRIMARY emp
+, c_CN_ACTIVITIES sagm
+, c_CN_ACTIVITIES sagl
+WHERE
+--joins
+con.pidm = contact.pidm
+AND con.pidm = names.pidm
+AND con.pidm = ind.pidm
+AND con.pidm = excl.pidm
+AND con.pidm = emp.pidm (+)
+AND con.pidm = sagm.pidm (+)
+and sagm.activity_code (+) = 'SAGM'
+and sagm.current_year_ind (+) = 'Y'
+AND con.pidm = sagl.pidm (+)
+and sagl.activity_code (+) = 'SAGL'
+and sagl.current_year_ind (+) = 'Y'
+-- contactable
+AND con.dead_ind = 'N'
+AND excl.trump_ind = 'N'
+AND contact.EMAIL_PREF_ADDRESS is not null
+AND excl.excl_nem = 'N'
+-- inclusions
+/*all LASA members
+current LU parents
+alumni that work in the Sustainability field
+Current students & faculty*/
+--1. LASA members
+AND ( 
+--1. LASA members
+    --sagl.pidm is not null 
+    sagl.pidm is not null
+    --sagm.current_year_ind is not null
+    OR sagm.pidm is not null
+--2.current LU parents
+    --OR   
+    OR ind.CURRENT_YEAR_UG_PARENT_IND = 'Y'
+    --3.alumni that work in the Sustainability field
+    OR (lower(empl_position) like '%sustain%' AND con.donor_code_primary in ('ALMB','ALMG','ALMX'))
+--4. Current students & faculty (students to be excluded)
+    OR FACULTY_IND = 'Y'
+    )
+
+ORDER BY con.name_sort
